@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MPA — Activity Tracker</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif; background: #f5f5f0; color: #1a1a1a; min-height: 100vh; padding: 20px 16px; }
+.top-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 8px; }
+.title { font-size: 17px; font-weight: 600; letter-spacing: -0.2px; }
+.month-nav { display: flex; align-items: center; gap: 10px; }
+.month-label { font-size: 14px; font-weight: 500; color: #555; min-width: 170px; text-align: center; }
+.nav-btn { background: white; border: 1px solid #ddd; border-radius: 6px; width: 28px; height: 28px; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; color: #555; transition: background 0.1s; }
+.nav-btn:hover { background: #eee; }
+.stats-row { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+.stat { background: white; border: 1px solid #e8e8e4; border-radius: 8px; padding: 7px 14px; font-size: 11px; color: #888; }
+.stat strong { font-size: 20px; font-weight: 600; color: #1a1a1a; display: block; }
+.table-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid #e0e0da; background: white; }
+table { border-collapse: collapse; }
+thead th { background: #f9f9f6; font-size: 10px; font-weight: 500; color: #bbb; padding: 6px 0; text-align: center; border-bottom: 2px solid #e0e0da; width: 27px; min-width: 27px; white-space: nowrap; }
+thead th.lbl-th { text-align: left; padding-left: 14px; width: 178px; min-width: 178px; font-size: 10px; color: #ccc; letter-spacing: 0.04em; }
+thead th.today-th { color: #1D9E75; font-weight: 700; }
+tr.special-row td { border-bottom: 1px solid #f0f0ec; }
+tr.special-row td.act-lbl { font-size: 12px; padding: 4px 8px 4px 14px; white-space: nowrap; width: 178px; min-width: 178px; font-weight: 500; }
+tr.расход-row td.act-lbl { color: #444; }
+tr.strain-row td.act-lbl { color: #185FA5; }
+tr.bhq-row td.act-lbl { color: #FF6B35; }
+tr.divider-row td { height: 2px; background: #e0e0da; padding: 0; }
+tr.sec-row td { background: #f5f5f0; font-size: 10px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: #999; padding: 8px 14px 4px; border-top: 1px solid #eee; }
+tr.act-row td { border-bottom: 1px solid #f2f2ee; }
+td.act-lbl { font-size: 12px; color: #333; padding: 3px 8px 3px 14px; white-space: nowrap; width: 178px; min-width: 178px; }
+td.cell { text-align: center; padding: 2px; width: 27px; min-width: 27px; }
+td.total-cell { text-align: center; padding: 2px 6px; width: 34px; min-width: 34px; font-size: 12px; font-weight: 700; color: #555; border-right: 2px solid #e0e0da; }
+th.total-th { width: 34px; min-width: 34px; border-right: 2px solid #e0e0da; color: #999; }
+.ci { width: 21px; height: 21px; border-radius: 4px; border: 1.5px solid #ddd; cursor: pointer; margin: 0 auto; display: flex; align-items: center; justify-content: center; transition: all 0.12s; background: white; }
+.ci:hover { border-color: #1D9E75; background: #e8f8f2; }
+.ci.done { background: #1D9E75; border-color: #1D9E75; }
+.ci.done::after { content: ''; display: block; width: 8px; height: 8px; border-radius: 2px; background: white; }
+.ci.today-ci:not(.done) { border-color: #1D9E75; background: rgba(29,158,117,0.08); }
+.ci.future { opacity: 0.25; cursor: default; pointer-events: none; }
+td.num-cell { text-align: center; padding: 2px; width: 40px; min-width: 40px; }
+.num-input { width: 35px; height: 21px; border-radius: 4px; border: 1.5px solid #ddd; text-align: center; font-size: 10px; font-weight: 500; color: #1a1a1a; background: white; outline: none; padding: 0; -moz-appearance: textfield; }
+.num-input::-webkit-outer-spin-button, .num-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.num-input:focus { border-color: #185FA5; background: #e6f1fb; }
+.num-input.has-value { border-color: #185FA5; color: #185FA5; font-weight: 600; background: #eef5fc; }
+.num-input.future-input { opacity: 0.25; pointer-events: none; }
+.num-input.today-input:not(.has-value) { border-color: #185FA5; background: rgba(24,95,165,0.07); }
+.bottom { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; flex-wrap: wrap; gap: 8px; }
+.legend { display: flex; gap: 14px; font-size: 11px; color: #aaa; flex-wrap: wrap; }
+.leg { display: flex; align-items: center; gap: 5px; }
+.ldot { width: 12px; height: 12px; border-radius: 3px; }
+.reset-btn { background: none; border: 1px solid #ddd; border-radius: 6px; padding: 5px 12px; font-size: 11px; color: #bbb; cursor: pointer; transition: all 0.15s; }
+.reset-btn:hover { border-color: #e24b4a; color: #e24b4a; }
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <div class="title">MPA — Activity Tracker</div>
+  <div class="month-nav">
+    <button class="nav-btn" id="prev">&#8249;</button>
+    <div class="month-label" id="mlabel"></div>
+    <button class="nav-btn" id="next">&#8250;</button>
+  </div>
+</div>
+
+<div class="stats-row" id="stats"></div>
+
+<div class="table-wrap">
+  <table id="tbl"></table>
+</div>
+
+<div class="bottom">
+  <div class="legend">
+    <div class="leg"><div class="ldot" style="background:#1D9E75"></div>done</div>
+    <div class="leg"><div class="ldot" style="border:1.5px solid #ddd;background:white"></div>not done</div>
+    <div class="leg"><div class="ldot" style="border:1.5px solid #1D9E75;background:rgba(29,158,117,0.08)"></div>today</div>
+    <div class="leg"><div class="ldot" style="border:1.5px solid #185FA5;background:#eef5fc"></div>Strain entered</div>
+  </div>
+  <button class="reset-btn" id="reset">Reset period</button>
+</div>
+
+<script>
+const SECTIONS = [
+  { title: 'BHQ', items: ['BrainHQ Score'] },
+  { title: 'Cardio', items: ['Boxing 35 min','Boxing Resistance Bands','Rowing Tabata','SkyErg Tabata','Climb Machine','Elliptical','Jump rope','High Knees','Run 5km'] },
+  { title: 'Calisthenics', items: ['Pull Ups','Dips','Hanging Leg Raise','Burpees','Push Ups','Air Squats','Squats','Walking Lunges','Jump','KGL WOD','Eye WOD'] },
+  { title: 'Strength', items: ['Core Twist Band','Biceps Curl','Band Press','Halo 24kg','Press 16x2','TGU'] },
+  { title: 'Daily', items: ['Walking 15,000 steps'] }
+];
+const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const WINDOW_SIZE = 30;
+
+const real = new Date();
+real.setHours(0, 0, 0, 0);
+
+let state = {};
+try { const s = localStorage.getItem('mpa_tracker_v4'); if (s) state = JSON.parse(s); } catch(e) {}
+function save() { try { localStorage.setItem('mpa_tracker_v4', JSON.stringify(state)); } catch(e) {} }
+
+function pad(n) { return String(n).padStart(2, '0'); }
+function fmtDate(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+function addDays(d, n) { const r = new Date(d); r.setDate(r.getDate() + n); return r; }
+function isSameDay(a, b) { return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate(); }
+function sk(dateStr, s, a) { return dateStr + '_' + s + '_' + a; }
+
+// Миграция старых ключей формата "год_месяц_секция_активность_день" (текущий месяц)
+// в новый формат "год-мес-день_секция_активность" — без этого данные текущего месяца
+// стали бы невидимы после перехода на скользящее окно.
+(function migrateOldKeys() {
+  const y = real.getFullYear(), m = real.getMonth();
+  const prefix = y + '_' + m + '_';
+  let changed = false;
+  Object.keys(state).forEach(k => {
+    if (k.indexOf(prefix) !== 0) return;
+    const rest = k.slice(prefix.length); // "секция_активность_день"
+    const lastUnderscore = rest.lastIndexOf('_');
+    if (lastUnderscore === -1) return;
+    const day = parseInt(rest.slice(lastUnderscore + 1), 10);
+    if (isNaN(day)) return;
+    const sa = rest.slice(0, lastUnderscore); // "секция_активность"
+    const dateStr = fmtDate(new Date(y, m, day));
+    const newKey = dateStr + '_' + sa;
+    if (!(newKey in state)) state[newKey] = state[k];
+    delete state[k];
+    changed = true;
+  });
+  if (changed) save();
+})();
+
+let endDate = new Date(real); // конец текущего окна, по умолчанию — сегодня
+
+function getDates() {
+  const arr = [];
+  for (let i = 0; i < WINDOW_SIZE; i++) arr.push(addDays(endDate, -i));
+  return arr;
+}
+
+function makeCheckRow(label, metaKey, dates, cssClass) {
+  const row = document.createElement('tr');
+  row.className = 'special-row ' + cssClass;
+  let total = 0;
+  dates.forEach(dt => { if (state[sk(fmtDate(dt), 'meta', metaKey)]) total++; });
+  const totalTd = document.createElement('td');
+  totalTd.className = 'total-cell';
+  totalTd.textContent = total;
+  row.appendChild(totalTd);
+  const lbl = document.createElement('td');
+  lbl.className = 'act-lbl';
+  lbl.textContent = label;
+  row.appendChild(lbl);
+  dates.forEach(dt => {
+    const future = dt > real;
+    const today = isSameDay(dt, real);
+    const key = sk(fmtDate(dt), 'meta', metaKey);
+    const isDone = !!state[key];
+    const td = document.createElement('td');
+    td.className = 'cell';
+    const ci = document.createElement('div');
+    ci.className = 'ci' + (isDone ? ' done' : '') + (today ? ' today-ci' : '') + (future ? ' future' : '');
+    if (!future) {
+      ci.addEventListener('click', () => {
+        state[key] = !state[key];
+        ci.classList.toggle('done', state[key]);
+        save();
+        let newTotal = 0;
+        dates.forEach(d2 => { if (state[sk(fmtDate(d2), 'meta', metaKey)]) newTotal++; });
+        totalTd.textContent = newTotal;
+      });
+    }
+    td.appendChild(ci);
+    row.appendChild(td);
+  });
+  return row;
+}
+
+function makeNumRow(label, metaKey, dates, cssClass) {
+  const row = document.createElement('tr');
+  row.className = 'special-row ' + cssClass;
+  const totalTd = document.createElement('td');
+  totalTd.className = 'total-cell';
+  row.appendChild(totalTd);
+  const lbl = document.createElement('td');
+  lbl.className = 'act-lbl';
+  lbl.textContent = label;
+  row.appendChild(lbl);
+  dates.forEach(dt => {
+    const future = dt > real;
+    const today = isSameDay(dt, real);
+    const key = sk(fmtDate(dt), 'meta', metaKey);
+    const val = state[key] || '';
+    const td = document.createElement('td');
+    td.className = 'num-cell';
+    const inp = document.createElement('input');
+    inp.type = 'number';
+    inp.min = 0; inp.max = 100;
+    inp.className = 'num-input' + (val ? ' has-value' : '') + (future ? ' future-input' : '') + (today && !val ? ' today-input' : '');
+    inp.value = val;
+    if (!future) {
+      inp.addEventListener('input', () => {
+        const v = inp.value.trim();
+        state[key] = v;
+        inp.classList.toggle('has-value', !!v);
+        inp.classList.toggle('today-input', today && !v);
+        save();
+      });
+    }
+    td.appendChild(inp);
+    row.appendChild(td);
+  });
+  return row;
+}
+
+function render() {
+  const dates = getDates();
+  const newest = dates[0], oldest = dates[dates.length - 1];
+  document.getElementById('mlabel').textContent =
+    pad(oldest.getDate()) + '.' + pad(oldest.getMonth() + 1) + ' – ' +
+    pad(newest.getDate()) + '.' + pad(newest.getMonth() + 1) + '.' + newest.getFullYear();
+
+  const tbl = document.getElementById('tbl');
+  tbl.innerHTML = '';
+
+  // Header
+  const thead = document.createElement('thead');
+  const hr = document.createElement('tr');
+  const totalTh = document.createElement('th');
+  totalTh.className = 'total-th';
+  totalTh.textContent = 'Σ';
+  hr.appendChild(totalTh);
+  const lth = document.createElement('th');
+  lth.className = 'lbl-th';
+  lth.textContent = 'Activity';
+  hr.appendChild(lth);
+  dates.forEach((dt, i) => {
+    const th = document.createElement('th');
+    const isMonthBoundary = i === 0 || dt.getMonth() !== dates[i - 1].getMonth();
+    th.textContent = dt.getDate() + (isMonthBoundary ? ' ' + MONTHS_SHORT[dt.getMonth()] : '');
+    if (isSameDay(dt, real)) th.className = 'today-th';
+    hr.appendChild(th);
+  });
+  thead.appendChild(hr);
+  tbl.appendChild(thead);
+
+  const tbody = document.createElement('tbody');
+
+  // Плановый расход
+  tbody.appendChild(makeCheckRow('Planned Burn 1200', 'расход', dates, 'расход-row'));
+
+  // Strain
+  tbody.appendChild(makeNumRow('Strain (Bevel)', 'strain', dates, 'strain-row'));
+
+  // Divider
+  const divRow = document.createElement('tr');
+  divRow.className = 'divider-row';
+  const divTd = document.createElement('td');
+  divTd.colSpan = dates.length + 2;
+  divRow.appendChild(divTd);
+  tbody.appendChild(divRow);
+
+  // Activity sections
+  let done = 0, possible = 0;
+  SECTIONS.forEach(sec => {
+    const sr = document.createElement('tr');
+    sr.className = 'sec-row';
+    const std = document.createElement('td');
+    std.colSpan = dates.length + 2;
+    std.textContent = sec.title;
+    sr.appendChild(std);
+    tbody.appendChild(sr);
+
+    sec.items.forEach(act => {
+      const row = document.createElement('tr');
+      row.className = 'act-row';
+      let rowTotal = 0;
+      dates.forEach(dt => { if (state[sk(fmtDate(dt), sec.title, act)]) rowTotal++; });
+      const totalTd = document.createElement('td');
+      totalTd.className = 'total-cell';
+      totalTd.textContent = rowTotal;
+      row.appendChild(totalTd);
+      const ltd = document.createElement('td');
+      ltd.className = 'act-lbl';
+      ltd.textContent = act;
+      ltd.title = act;
+      row.appendChild(ltd);
+      dates.forEach(dt => {
+        const future = dt > real;
+        const today = isSameDay(dt, real);
+        const key = sk(fmtDate(dt), sec.title, act);
+        const isDone = !!state[key];
+        if (!future) { possible++; if (isDone) done++; }
+        const td = document.createElement('td');
+        td.className = 'cell';
+        const ci = document.createElement('div');
+        ci.className = 'ci' + (isDone ? ' done' : '') + (today ? ' today-ci' : '') + (future ? ' future' : '');
+        if (!future) {
+          ci.addEventListener('click', () => {
+            state[key] = !state[key];
+            ci.classList.toggle('done', state[key]);
+            save(); updateStats();
+            let newTotal = 0;
+            dates.forEach(d2 => { if (state[sk(fmtDate(d2), sec.title, act)]) newTotal++; });
+            totalTd.textContent = newTotal;
+          });
+        }
+        td.appendChild(ci);
+        row.appendChild(td);
+      });
+      tbody.appendChild(row);
+    });
+  });
+
+  tbl.appendChild(tbody);
+  updateStats(done, possible);
+}
+
+function updateStats(d, p) {
+  if (d === undefined) {
+    d = 0; p = 0;
+    const dates = getDates();
+    SECTIONS.forEach(sec => sec.items.forEach(act => {
+      dates.forEach(dt => {
+        if (dt <= real) { p++; if (state[sk(fmtDate(dt), sec.title, act)]) d++; }
+      });
+    }));
+  }
+  const pct = p > 0 ? Math.round(d / p * 100) : 0;
+  document.getElementById('stats').innerHTML =
+    '<div class="stat"><strong>' + d + '</strong>done</div>' +
+    '<div class="stat"><strong>' + (p - d) + '</strong>missed</div>' +
+    '<div class="stat"><strong>' + pct + '%</strong>completion</div>';
+}
+
+document.getElementById('prev').addEventListener('click', () => {
+  endDate = addDays(endDate, -WINDOW_SIZE);
+  render();
+});
+document.getElementById('next').addEventListener('click', () => {
+  const next = addDays(endDate, WINDOW_SIZE);
+  endDate = next > real ? new Date(real) : next;
+  render();
+});
+document.getElementById('reset').addEventListener('click', () => {
+  if (confirm('Reset all marks for the displayed period (30 days)?')) {
+    const dates = getDates();
+    SECTIONS.forEach(sec => sec.items.forEach(act => {
+      dates.forEach(dt => delete state[sk(fmtDate(dt), sec.title, act)]);
+    }));
+    dates.forEach(dt => {
+      delete state[sk(fmtDate(dt), 'meta', 'расход')];
+      delete state[sk(fmtDate(dt), 'meta', 'strain')];
+    });
+    save(); render();
+  }
+});
+
+render();
+</script>
+</body>
+</html>
